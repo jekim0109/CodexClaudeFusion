@@ -87,5 +87,41 @@ empty_home=$(mktemp -d)
 assert_run "skill dir missing → silent" 0 "" \
     env -i HOME="$empty_home" PATH="$t_stub:/usr/bin:/bin" bash -c "cd '$t_repo' && bash '$HOOK'"
 
+# --- size-filter cases ---
+
+# helper: prepare a tmp repo with N changed lines in foo.c
+prep_repo_with_change() {
+    local lines="$1"
+    local d
+    d=$(mktmprepo)
+    : > "$d/foo.c"
+    git -C "$d" add foo.c
+    git -C "$d" -c user.email=t@t -c user.name=t commit -q -m base
+    for ((i=1; i<=lines; i++)); do printf 'line %d\n' "$i" >> "$d/foo.c"; done
+    printf '%s' "$d"
+}
+
+# (4) clean working tree → silent
+clean=$(mktmprepo)
+assert_run "clean working tree → silent" 0 "" \
+    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$clean' && bash '$HOOK'"
+
+# (5) tiny diff (2 lines) → silent
+tiny=$(prep_repo_with_change 2)
+assert_run "diff 2 lines → silent" 0 "" \
+    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$tiny' && bash '$HOOK'"
+
+# (6) huge diff (>500 lines) → warning + skip
+huge=$(prep_repo_with_change 600)
+assert_run "diff 600 lines → warning + skip" 0 ">500" \
+    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$huge' && bash '$HOOK'"
+
+# (7) medium diff (10 lines) → reaches codex stub (which writes APPROVED) but
+#     since later filters and codex aren't wired yet, behavior is "silent exit 0"
+#     after this task. Reassert in later tasks.
+mid=$(prep_repo_with_change 10)
+assert_run "diff 10 lines → silent (post-task-2; codex not wired yet)" 0 "" \
+    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$mid' && bash '$HOOK'"
+
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
