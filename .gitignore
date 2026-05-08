@@ -1,2 +1,6 @@
 .DS_Store
 .claude/settings.local.json
+
+# Fusion runtime artifacts (per-session temp dirs are under /tmp/, but be defensive)
+fusion-*.tmp/
+*.swp
