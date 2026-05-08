@@ -28,5 +28,33 @@ if (( DIFF_LINES > 500 )); then
     exit 0
 fi
 
+# 3. Filter (c) — file pattern blocklist
+BLOCK_PATTERNS=(
+    "*.md" "*.txt" "*.json" "*.lock" "*.log" "*.bak"
+    "package-lock.json" "yarn.lock" "Cargo.lock" "pnpm-lock.yaml"
+)
+
+is_blocked() {
+    local f="$1"
+    local base; base="$(basename "$f")"
+    local p
+    for p in "${BLOCK_PATTERNS[@]}"; do
+        case "$f" in $p) return 0 ;; esac
+        case "$base" in $p) return 0 ;; esac
+    done
+    return 1
+}
+
+CHANGED_FILES=$(git diff HEAD --name-only)
+all_blocked=1
+while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    if ! is_blocked "$f"; then
+        all_blocked=0
+        break
+    fi
+done <<< "$CHANGED_FILES"
+(( all_blocked )) && exit 0
+
 # Subsequent filter and codex steps will be added in later tasks.
 exit 0

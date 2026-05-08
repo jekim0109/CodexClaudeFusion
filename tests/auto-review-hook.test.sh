@@ -24,13 +24,13 @@ GIT_BIN_DIR="$(dirname "$(command -v git)")"
 # stub_codex_dir: creates a tmp dir containing a fake `codex` and `git` (or only codex)
 # usage: PATH="$(stub_codex_dir approved)":/usr/bin:/bin ...
 stub_codex_dir() {
-    local mode="$1"     # "approved" | "revise" | "fail" | "missing"
+    local mode="$1"
     local d
     d=$(mktemp -d)
     if [[ "$mode" != "missing" ]]; then
         cat > "$d/codex" <<STUB
 #!/usr/bin/env bash
-# Fake codex: parses -o <file>, writes a canned reviewer message there.
+[[ -n "\${CODEX_CALLED_SENTINEL:-}" ]] && touch "\$CODEX_CALLED_SENTINEL"
 out=""
 while [[ \$# -gt 0 ]]; do
     case "\$1" in
@@ -70,6 +70,33 @@ assert_run() {
         FAIL=$((FAIL+1))
         printf '  FAIL: %s\n    expected_exit=%s grep=%q\n    got_exit=%s out=%q\n' \
             "$desc" "$expected_exit" "$expected_stdout_grep" "$actual_exit" "$actual_out"
+    fi
+}
+
+run_hook_in() {
+    # Args: <repo_dir> <stub_dir> <sentinel>
+    local repo="$1" stub="$2" sent="$3"
+    env -i HOME="$HOME" PATH="$stub:$GIT_BIN_DIR:/usr/bin:/bin" CODEX_CALLED_SENTINEL="$sent" \
+        bash -c "cd '$repo' && bash '$HOOK'"
+}
+
+assert_called2() {
+    local desc="$1" expected_exit="$2" expect_called="$3" expected_stdout_grep="$4"
+    local repo="$5" stub="$6"
+    local sentinel actual_out actual_exit was_called=no ok=1
+    sentinel=$(mktemp -u); rm -f "$sentinel"
+    actual_out="$(run_hook_in "$repo" "$stub" "$sentinel" 2>/dev/null)"
+    actual_exit=$?
+    [[ -e "$sentinel" ]] && was_called=yes
+    rm -f "$sentinel"
+    [[ "$actual_exit" == "$expected_exit" ]] || ok=0
+    [[ "$was_called" == "$expect_called" ]] || ok=0
+    [[ -z "$expected_stdout_grep" ]] || printf '%s' "$actual_out" | grep -qE "$expected_stdout_grep" || ok=0
+    if (( ok )); then
+        PASS=$((PASS+1)); printf '  PASS: %s\n' "$desc"
+    else
+        FAIL=$((FAIL+1)); printf '  FAIL: %s\n    exp(exit=%s called=%s grep=%q) got(exit=%s called=%s out=%q)\n' \
+            "$desc" "$expected_exit" "$expect_called" "$expected_stdout_grep" "$actual_exit" "$was_called" "$actual_out"
     fi
 }
 
@@ -132,6 +159,41 @@ assert_run "diff 600 lines → warning + skip" 0 ">500" \
 mid=$(prep_repo_with_change 10)
 assert_run "diff 10 lines → silent (post-task-2; codex not wired yet)" 0 "" \
     env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$mid' && bash '$HOOK'"
+
+# --- pattern filter cases ---
+
+prep_repo_with_files() {
+    # Args: filename1 filename2 ...
+    local d
+    d=$(mktmprepo)
+    for f in "$@"; do
+        mkdir -p "$d/$(dirname "$f")" 2>/dev/null
+        for ((i=1; i<=10; i++)); do printf 'line %d\n' "$i" >> "$d/$f"; done
+    done
+    git -C "$d" add . 2>/dev/null
+    git -C "$d" -c user.email=t@t -c user.name=t commit -q -m base 2>/dev/null
+    for f in "$@"; do
+        printf 'extra1\nextra2\nextra3\nextra4\n' >> "$d/$f"
+    done
+    printf '%s' "$d"
+}
+
+# (8) only *.lock changed → all BLOCK → codex NOT called
+lockonly=$(prep_repo_with_files yarn.lock)
+assert_called2 "only yarn.lock changed → codex NOT called" 0 no "" "$lockonly" "$t_stub"
+
+# (9) only *.md changed → all BLOCK → codex NOT called
+mdonly=$(prep_repo_with_files docs/note.md)
+assert_called2 "only *.md changed → codex NOT called" 0 no "" "$mdonly" "$t_stub"
+
+# (10) Makefile + lock → Makefile is non-block → reaches stage past pattern filter
+#      (codex still not wired in task 3, so expect_called=no for now; task 5 strengthens)
+mkmix=$(prep_repo_with_files Makefile package-lock.json)
+assert_called2 "Makefile + lock → reaches stage past pattern filter" 0 no "" "$mkmix" "$t_stub"
+
+# (11) only *.c → non-block → reaches stage past pattern filter
+conly=$(prep_repo_with_files src/foo.c)
+assert_called2 "only *.c → reaches stage past pattern filter" 0 no "" "$conly" "$t_stub"
 
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
