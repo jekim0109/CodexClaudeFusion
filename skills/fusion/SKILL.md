@@ -70,6 +70,13 @@ fi
 
 `MAX_ROUNDS=3` (또는 사용자가 `--max-rounds`로 지정한 값). `round=1..MAX_ROUNDS` 까지 반복:
 
+```bash
+# 라운드 변수는 매 Bash 호출마다 명시적으로 설정한다.
+# Claude는 각 라운드 시작 시 round=N으로 셋업하고, §3.c 끝에서
+# round=$((round+1)) 후 round <= MAX_ROUNDS이면 §3.a로 돌아간다.
+round=1
+```
+
 ### 3.a 검토자 라운드 — Codex 호출
 
 이전 라운드 히스토리 모으기:
@@ -87,12 +94,18 @@ done
 프롬프트 합성 (slot 치환):
 
 ```bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/prompts/reviewer.md"
+SKILL_DIR="$HOME/.claude/skills/fusion"
+[[ -d "$SKILL_DIR" ]] || { echo "ERROR: /fusion 스킬 미설치. install.sh 먼저 실행."; exit 1; }
+TEMPLATE="$SKILL_DIR/prompts/reviewer.md"
 
 # Use python3 for safe substitution (avoids shell metachar issues with diffs)
 TASK_TEXT="$([[ "$MODE" == "task" ]] && cat "$FUSION_DIR/task.txt" || echo "[diff-mode] Review the working tree changes shown below.")"
 DIFF_TEXT="$(git diff HEAD)"
+
+DIFF_LINE_COUNT=$(printf '%s\n' "$DIFF_TEXT" | wc -l)
+if (( DIFF_LINE_COUNT > 500 )); then
+    echo "WARNING: diff 크기 ${DIFF_LINE_COUNT}줄 (>500). Codex token 제한 가능성. 진행."
+fi
 
 PROMPT_FILE="$FUSION_DIR/round-${round}-prompt.txt"
 export TASK_TEXT PREV_HISTORY DIFF_TEXT
@@ -136,7 +149,7 @@ fi
 ### 3.b VERDICT 파싱
 
 ```bash
-VERDICT=$(bash "$SCRIPT_DIR/lib/parse-verdict.sh" < "$LAST_MSG_FILE")
+VERDICT=$(bash "$SKILL_DIR/lib/parse-verdict.sh" < "$LAST_MSG_FILE")
 case "$VERDICT" in
     APPROVED)
         echo "== Round $round / $MAX_ROUNDS =="
@@ -172,16 +185,27 @@ rejected: <기각 항목 라벨> — reason: <한 줄 이유>
 
 이 요약을 `$FUSION_DIR/round-${round}-claude.txt`에 저장:
 
-```bash
-cat > "$FUSION_DIR/round-${round}-claude.txt" <<'EOF'
-applied: BLOCKER #1 (null check)
-rejected: MINOR #2 — reason: 기존 매크로 정책과 충돌
-EOF
+**Write 도구를 사용**하여 실제 수용/기각 요약을 다음 형식으로 `$FUSION_DIR/round-${round}-claude.txt`에 저장:
+
+```
+applied: <수용 항목 라벨, 콤마 구분>
+rejected: <기각 항목 라벨> — reason: <한 줄 이유>
 ```
 
-(라운드마다 실제 적용/기각 내용을 채울 것)
+(예시 텍스트가 아니라 라운드별 실제 내용을 채울 것. 위 placeholder를 그대로 쓰지 말 것.)
 
-이후 다음 라운드로 계속.
+이후 다음 라운드로 계속:
+
+```bash
+round=$((round + 1))
+if (( round > MAX_ROUNDS )); then
+    # §4 MAX_ROUNDS 처리로 진행
+    :
+else
+    # round 변수가 갱신된 상태로 §3.a로 돌아간다
+    :
+fi
+```
 
 ## 4. MAX_ROUNDS 도달 처리
 
@@ -202,6 +226,11 @@ exit 1
 - ❌ VERDICT 마커가 없을 때 자체 판단으로 분류 — 즉시 명시적 에러로 종료
 - ❌ working tree를 commit/stash로 변형 — 사용자 git 흐름 보존
 - ❌ Codex가 직접 파일 수정하도록 sandbox 풀기 — 항상 `--sandbox read-only`
+
+### Phase 1 한계 (acknowledged)
+
+- §2의 `git add -N .`는 untracked 파일을 `git diff HEAD`에 포함시키기 위한 의도이지만 사용자 인덱스에 intent-to-add 항목을 남깁니다. 종료 후 `git status`에 'A'로 보이면 `git reset -q HEAD -- <files>`로 해제하세요. Phase 2에서 자동 정리.
+- SKILL.md는 인라인 명세이므로 Ctrl+C 인터럽트 시 `final.txt` 자동 기록을 보장하지 않습니다. 강제 종료 후 사후 검토는 `$FUSION_DIR/round-N-codex.txt`로 직접 확인하세요.
 
 ## 6. 성공·실패 신호 정리
 
