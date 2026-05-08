@@ -16,6 +16,11 @@ mktmprepo() {
     printf '%s' "$d"
 }
 
+# Resolve git's bin directory at host level (env -i strips PATH otherwise).
+# This makes the test portable across Apple Silicon (/opt/homebrew/bin),
+# Intel macOS (/usr/local/bin), and Linux (/usr/bin or wherever).
+GIT_BIN_DIR="$(dirname "$(command -v git)")"
+
 # stub_codex_dir: creates a tmp dir containing a fake `codex` and `git` (or only codex)
 # usage: PATH="$(stub_codex_dir approved)":/usr/bin:/bin ...
 stub_codex_dir() {
@@ -104,24 +109,29 @@ prep_repo_with_change() {
 # (4) clean working tree → silent
 clean=$(mktmprepo)
 assert_run "clean working tree → silent" 0 "" \
-    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$clean' && bash '$HOOK'"
+    env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$clean' && bash '$HOOK'"
 
-# (5) tiny diff (2 lines) → silent
+# (5) tiny diff (2 changed lines → ~7 unified-diff lines) → silent
+#     Note: the `<3` branch in the hook is essentially defensive — git diff
+#     metadata adds ~5+ lines so any non-empty diff already exceeds the floor.
+#     This case reaches trailing exit 0 via downstream filters (until task 5
+#     wires codex). Kept for documentation and future-proofing if the hook
+#     ever counts changed lines instead of unified-diff lines.
 tiny=$(prep_repo_with_change 2)
 assert_run "diff 2 lines → silent" 0 "" \
-    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$tiny' && bash '$HOOK'"
+    env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$tiny' && bash '$HOOK'"
 
 # (6) huge diff (>500 lines) → warning + skip
 huge=$(prep_repo_with_change 600)
 assert_run "diff 600 lines → warning + skip" 0 ">500" \
-    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$huge' && bash '$HOOK'"
+    env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$huge' && bash '$HOOK'"
 
 # (7) medium diff (10 lines) → reaches codex stub (which writes APPROVED) but
 #     since later filters and codex aren't wired yet, behavior is "silent exit 0"
 #     after this task. Reassert in later tasks.
 mid=$(prep_repo_with_change 10)
 assert_run "diff 10 lines → silent (post-task-2; codex not wired yet)" 0 "" \
-    env -i HOME="$HOME" PATH="$t_stub:/opt/homebrew/bin:/usr/bin:/bin" bash -c "cd '$mid' && bash '$HOOK'"
+    env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$mid' && bash '$HOOK'"
 
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
