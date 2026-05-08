@@ -57,7 +57,9 @@ if [[ -z "$(git diff HEAD)" ]]; then
 fi
 ```
 
-diff 모드면 이 단계를 건너뛴다. 단, working tree가 깨끗하면(`git diff HEAD`가 비어 있으면) 즉시 안내 후 종료:
+diff 모드면 이 단계(작자 라운드)를 건너뛴다. **주의**: 순수 diff 모드는 `git diff HEAD` 기준이라 untracked 파일이 검토 대상에서 빠질 수 있다. 신규 파일을 함께 검토하려면 `git add -N <파일>` 후 호출하거나, 본 스킬을 task 모드로 사용할 것.
+
+단, working tree가 깨끗하면(`git diff HEAD`가 비어 있으면) 즉시 안내 후 종료:
 
 ```bash
 if [[ -z "$(git diff HEAD)" ]]; then
@@ -78,6 +80,8 @@ round=1
 ```
 
 ### 3.a 검토자 라운드 — Codex 호출
+
+> **주의**: 각 라운드 시작 시 `FUSION_DIR`, `MODE`, `MAX_ROUNDS`, `round` 변수를 이전 출력 또는 대화 컨텍스트에서 읽어 새 Bash 호출에 명시적으로 다시 셋업할 것. Claude Code의 Bash 도구는 호출마다 새 셸 프로세스이므로 환경변수가 자동 상속되지 않는다.
 
 이전 라운드 히스토리 모으기:
 
@@ -100,6 +104,7 @@ TEMPLATE="$SKILL_DIR/prompts/reviewer.md"
 
 # Use python3 for safe substitution (avoids shell metachar issues with diffs)
 TASK_TEXT="$([[ "$MODE" == "task" ]] && cat "$FUSION_DIR/task.txt" || echo "[diff-mode] Review the working tree changes shown below.")"
+git add -N . 2>/dev/null  # task 모드에서 직전 라운드 작자 응답으로 새 파일이 추가됐을 수 있음
 DIFF_TEXT="$(git diff HEAD)"
 
 DIFF_LINE_COUNT=$(printf '%s\n' "$DIFF_TEXT" | wc -l)
