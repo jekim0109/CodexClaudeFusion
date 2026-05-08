@@ -149,6 +149,7 @@ fi
 ### 3.b VERDICT 파싱
 
 ```bash
+SKILL_DIR="$HOME/.claude/skills/fusion"
 VERDICT=$(bash "$SKILL_DIR/lib/parse-verdict.sh" < "$LAST_MSG_FILE")
 case "$VERDICT" in
     APPROVED)
@@ -176,23 +177,14 @@ esac
 1. 각 BLOCKER / MAJOR / MINOR 항목을 검토
 2. **무조건 수용 금지** — 명백히 잘못되거나 정책에 어긋나는 지적은 거부
 3. 수용한 항목은 Edit/Write 도구로 코드 수정 (scope creep 금지: 새 기능 추가 안 함, 피드백 반영만)
-4. 한 줄 요약을 다음 형식으로 작성:
+4. **Write 도구를 사용**하여 실제 수용/기각 요약을 다음 형식으로 `$FUSION_DIR/round-${round}-claude.txt`에 저장:
 
-```
-applied: <수용한 항목 라벨>
-rejected: <기각 항목 라벨> — reason: <한 줄 이유>
-```
+   ```
+   applied: <수용 항목 라벨, 콤마 구분>
+   rejected: <기각 항목 라벨> — reason: <한 줄 이유>
+   ```
 
-이 요약을 `$FUSION_DIR/round-${round}-claude.txt`에 저장:
-
-**Write 도구를 사용**하여 실제 수용/기각 요약을 다음 형식으로 `$FUSION_DIR/round-${round}-claude.txt`에 저장:
-
-```
-applied: <수용 항목 라벨, 콤마 구분>
-rejected: <기각 항목 라벨> — reason: <한 줄 이유>
-```
-
-(예시 텍스트가 아니라 라운드별 실제 내용을 채울 것. 위 placeholder를 그대로 쓰지 말 것.)
+   라운드별 실제 내용으로 채울 것. 위 placeholder 텍스트를 그대로 쓰지 말 것.
 
 이후 다음 라운드로 계속:
 
