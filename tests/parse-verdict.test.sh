@@ -69,6 +69,21 @@ assert_case "single-line approved input" \
     "APPROVED" "0" \
     "VERDICT: APPROVED"
 
+assert_case "trailing whitespace on APPROVED marker is unknown (strict)" \
+    "UNKNOWN" "1" \
+    "review text
+VERDICT: APPROVED   "
+
+assert_case "trailing whitespace on REVISE marker is unknown (strict)" \
+    "UNKNOWN" "1" \
+    "issues:
+VERDICT: REVISE   "
+
+assert_case "leading whitespace on REVISE marker is trimmed" \
+    "REVISE" "0" \
+    "review text
+   VERDICT: REVISE"
+
 assert_case "empty input is unknown" \
     "UNKNOWN" "1" \
     ""
