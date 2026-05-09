@@ -64,5 +64,59 @@ if [[ -f "$CACHE_FILE" ]] && grep -qx "$DIFF_HASH" "$CACHE_FILE"; then
     exit 0
 fi
 
-# Subsequent codex call and cache write steps will be added in task 5.
+# 5. Codex call (single round, no PREV_HISTORY)
+FUSION_TS=$(date +%s)
+FUSION_RAND=$(printf '%04x' $((RANDOM)))
+FUSION_DIR="/tmp/fusion-${FUSION_TS}-${FUSION_RAND}"
+mkdir -p "$FUSION_DIR"
+
+PREV_HISTORY="(none)"
+TASK_TEXT="[auto-review] Stop hook 자동 리뷰. Working tree changes shown below."
+PROMPT_FILE="$FUSION_DIR/round-1-prompt.txt"
+LAST_MSG_FILE="$FUSION_DIR/round-1-codex.txt"
+
+export TASK_TEXT PREV_HISTORY DIFF_TEXT
+python3 - "$SKILL_DIR/prompts/reviewer.md" "$PROMPT_FILE" <<'PYEOF'
+import sys, os
+tmpl_path, out_path = sys.argv[1], sys.argv[2]
+with open(tmpl_path) as f:
+    s = f.read()
+s = s.replace("{{TASK_OR_DIFF_MODE}}", os.environ["TASK_TEXT"])
+s = s.replace("{{PREV_HISTORY_OR_EMPTY}}", os.environ["PREV_HISTORY"])
+s = s.replace("{{GIT_DIFF_HEAD}}", os.environ["DIFF_TEXT"])
+with open(out_path, "w") as f:
+    f.write(s)
+PYEOF
+
+SECONDS=0
+if ! codex exec --skip-git-repo-check --sandbox read-only -o "$LAST_MSG_FILE" - < "$PROMPT_FILE" 2> "$FUSION_DIR/round-1-codex.stderr"; then
+    sleep 1
+    if ! codex exec --skip-git-repo-check --sandbox read-only -o "$LAST_MSG_FILE" - < "$PROMPT_FILE" 2>> "$FUSION_DIR/round-1-codex.stderr"; then
+        exit 0
+    fi
+fi
+ELAPSED=$SECONDS
+
+# 6. VERDICT parse
+VERDICT=$(bash "$SKILL_DIR/lib/parse-verdict.sh" < "$LAST_MSG_FILE")
+
+# 7. Cache write (only on a successful round)
+echo "$DIFF_HASH" >> "$CACHE_FILE"
+tail -n 100 "$CACHE_FILE" > "$CACHE_FILE.tmp" 2>/dev/null && mv "$CACHE_FILE.tmp" "$CACHE_FILE"
+
+# 8. Output
+case "$VERDICT" in
+    APPROVED)
+        echo "[fusion] ✓ auto-review APPROVED (${ELAPSED}s)"
+        ;;
+    REVISE)
+        BLOCKERS=$(grep -c '^- BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        MAJORS=$(grep -c   '^- MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        MINORS=$(grep -c   '^- MINOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        echo "[fusion] ⚠ auto-review REVISE — ${BLOCKERS} BLOCKER, ${MAJORS} MAJOR, ${MINORS} MINOR (state: $FUSION_DIR)"
+        ;;
+    *)
+        exit 0
+        ;;
+esac
 exit 0

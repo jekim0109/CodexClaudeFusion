@@ -139,14 +139,12 @@ clean=$(mktmprepo)
 assert_run "clean working tree → silent" 0 "" \
     env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$clean' && bash '$HOOK'"
 
-# (5) tiny diff (2 changed lines → ~7 unified-diff lines) → silent
+# (5) tiny diff (2 changed lines → ~7 unified-diff lines) → codex called (APPROVED)
 #     Note: the `<3` branch in the hook is essentially defensive — git diff
 #     metadata adds ~5+ lines so any non-empty diff already exceeds the floor.
-#     This case reaches trailing exit 0 via downstream filters (until task 5
-#     wires codex). Kept for documentation and future-proofing if the hook
-#     ever counts changed lines instead of unified-diff lines.
+#     Now that codex is wired (task 5), this case reaches codex and gets APPROVED.
 tiny=$(prep_repo_with_change 2)
-assert_run "diff 2 lines → silent" 0 "" \
+assert_run "diff 2 lines → APPROVED (codex wired)" 0 "APPROVED" \
     env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$tiny' && bash '$HOOK'"
 
 # (6) huge diff (>500 lines) → warning + skip
@@ -154,11 +152,9 @@ huge=$(prep_repo_with_change 600)
 assert_run "diff 600 lines → warning + skip" 0 ">500" \
     env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$huge' && bash '$HOOK'"
 
-# (7) medium diff (10 lines) → reaches codex stub (which writes APPROVED) but
-#     since later filters and codex aren't wired yet, behavior is "silent exit 0"
-#     after this task. Reassert in later tasks.
+# (7) medium diff (10 lines) → codex called → APPROVED output
 mid=$(prep_repo_with_change 10)
-assert_run "diff 10 lines → silent (post-task-2; codex not wired yet)" 0 "" \
+assert_run "diff 10 lines → APPROVED (codex wired)" 0 "APPROVED" \
     env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" bash -c "cd '$mid' && bash '$HOOK'"
 
 # --- pattern filter cases ---
@@ -188,13 +184,17 @@ mdonly=$(prep_repo_with_files docs/note.md)
 assert_called2 "only *.md changed → codex NOT called" 0 no "" "$mdonly" "$t_stub"
 
 # (10) Makefile + lock → Makefile is non-block → reaches stage past pattern filter
-#      (codex still not wired in task 3, so expect_called=no for now; task 5 strengthens)
 mkmix=$(prep_repo_with_files Makefile package-lock.json)
-assert_called2 "Makefile + lock → reaches stage past pattern filter" 0 no "" "$mkmix" "$t_stub"
+assert_called2 "Makefile + lock → codex CALLED (APPROVED)" 0 yes "APPROVED" "$mkmix" "$t_stub"
 
 # (11) only *.c → non-block → reaches stage past pattern filter
 conly=$(prep_repo_with_files src/foo.c)
-assert_called2 "only *.c → reaches stage past pattern filter" 0 no "" "$conly" "$t_stub"
+assert_called2 "only *.c → codex CALLED (APPROVED)" 0 yes "APPROVED" "$conly" "$t_stub"
+
+# (14) REVISE stub → severity counts in output
+revise_stub=$(stub_codex_dir revise)
+revise_repo=$(prep_repo_with_files src/bug.c)
+assert_called2 "REVISE → 한 줄 + state 경로" 0 yes "REVISE" "$revise_repo" "$revise_stub"
 
 # --- cache cases ---
 
