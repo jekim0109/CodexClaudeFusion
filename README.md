@@ -139,10 +139,51 @@ cd <your-project>
 
 A1~A5 dogfooding 결과는 codex CLI 0.128.0 환경에서 2026-05-09 검증. 두 가지 버그 발견·수정: (1) severity count `|| echo 0`이 매치 0건일 때 double-print(`"0\n0"`); (2) Codex가 reviewer.md의 `- BLOCKER:` 형식 대신 `BLOCKER:` 만 출력하는 경우 매칭 안됨. 둘 다 fix 적용 (regex 관대화 + ${VAR:-0} 패턴).
 
+## 펌웨어 모드 (Phase 3)
+
+ARM Cortex-M 펌웨어 코드를 검토할 때 ISR 안전성·race condition·Volatile 정확성 룰을 추가로 적용합니다. 일반 프로젝트 격리를 위해 **project-local opt-in** 방식.
+
+### Project-local opt-in
+
+```bash
+cd <your-firmware-project>
+/path/to/CodexClaudeFusion/enable-firmware.sh
+```
+
+`.claude/settings.json`에 `fusion.firmware: true`가 기록되며, 이후 그 프로젝트의 `/fusion`(수동) 또는 자동 리뷰가 `firmware-rules.md`를 prompt 끝에 append합니다.
+
+해제:
+```bash
+cd <your-firmware-project>
+/path/to/CodexClaudeFusion/disable-firmware.sh
+```
+
+### 룰 카테고리 (MVP)
+
+- **A. ISR 안전성 + race condition** — ISR 안 sleep/printf, ISR-shared 변수의 volatile + atomic, memory barrier, critical section 균형
+- **B. Volatile 정확성** — 하드웨어 레지스터 volatile, ISR 공유 변수, volatile vs atomic 혼동, `volatile T*` vs `T* volatile`
+
+펌웨어 이슈는 출력에 카테고리 prefix가 붙습니다:
+```
+BLOCKER (A.ISR): src/foo.c:42 — ...
+MAJOR (B.VOL):   src/bar.c:17 — ...
+```
+
+DMA·Watchdog·Static memory·자동 감지·사용자 정의 룰은 Phase 3.x로 미룸.
+
+### 검증 시나리오 (dogfooding)
+
+| 시나리오 | 기대 결과 | 결과 |
+|---|---|---|
+| F1: enable-firmware → ISR 함수에 `printf` 추가 → /fusion | `BLOCKER (A.ISR)` 출력 | (추후 기록) |
+| F2: enable-firmware → ISR-shared 변수에 volatile 누락 → /fusion | `MAJOR (B.VOL)` 또는 `MAJOR (A.ISR)` | (추후 기록) |
+| F3: disable-firmware → 같은 buggy 코드 → /fusion | base mode (펌웨어 prefix 없음) | (추후 기록) |
+| F4: enable-firmware → 일반 .c 변경 (펌웨어 무관) | base + firmware 룰 모두 적용, 위반 없으면 APPROVED | (추후 기록) |
+
 ## 후속 단계 로드맵
 
 - **Phase 2**: Stop hook 자동 리뷰 ✅ 구현 완료, A1~A5 dogfooding 통과 (위 "자동 리뷰" 섹션 참조)
-- **Phase 3**: 펌웨어 특화 룰셋 (ARM/embedded, ISR, watchdog)
+- **Phase 3**: 펌웨어 특화 룰셋 ✅ 구현 진행 중 (ISR/race + Volatile MVP — 위 "펌웨어 모드" 섹션 참조; DMA·Watchdog은 Phase 3.x)
 - **Phase 4**: systematic-debugging / TDD 통합
 
 ## 라이선스
