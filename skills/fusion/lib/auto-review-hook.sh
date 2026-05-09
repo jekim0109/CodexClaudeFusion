@@ -137,11 +137,11 @@ case "$VERDICT" in
         # grep -c always prints count (even 0); use ${VAR:-0} for missing-file edge.
         # Do NOT chain `|| echo 0` (would append a second "0" line on no-match exit).
         # Match both bare form (BLOCKER:) and category-prefixed form (BLOCKER (A.ISR):)
-        # required by Phase 3 firmware-rules.md. Uses character class after BLOCKER to
-        # accept colon, paren, or whitespace boundary.
-        BLOCKERS=$(grep -cE '^[[:space:]]*[-*]?[[:space:]]*BLOCKER([[:space:]]|\(|:)' "$LAST_MSG_FILE" 2>/dev/null); BLOCKERS=${BLOCKERS:-0}
-        MAJORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MAJOR([[:space:]]|\(|:)'   "$LAST_MSG_FILE" 2>/dev/null); MAJORS=${MAJORS:-0}
-        MINORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MINOR([[:space:]]|\(|:)'   "$LAST_MSG_FILE" 2>/dev/null); MINORS=${MINORS:-0}
+        # required by Phase 3 firmware-rules.md. Pattern requires either direct colon
+        # or whitespace+paren — narrative mentions like "BLOCKER found in..." won't match.
+        BLOCKERS=$(grep -cE '^[[:space:]]*[-*]?[[:space:]]*BLOCKER([[:space:]]+\(|:)' "$LAST_MSG_FILE" 2>/dev/null); BLOCKERS=${BLOCKERS:-0}
+        MAJORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MAJOR([[:space:]]+\(|:)'   "$LAST_MSG_FILE" 2>/dev/null); MAJORS=${MAJORS:-0}
+        MINORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MINOR([[:space:]]+\(|:)'   "$LAST_MSG_FILE" 2>/dev/null); MINORS=${MINORS:-0}
         echo "[fusion] ⚠ auto-review REVISE — ${BLOCKERS} BLOCKER, ${MAJORS} MAJOR, ${MINORS} MINOR (state: $FUSION_DIR)"
         ;;
     *)

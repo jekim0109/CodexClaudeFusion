@@ -2,7 +2,7 @@
 
 Claude와 Codex가 한 번의 트리거로 자동 핑퐁 검증을 수행하는 슬래시 스킬 `/fusion`.
 
-작자=Claude, 검토자=Codex 고정 역할로 코드를 합의(`VERDICT: APPROVED`)하거나 최대 N라운드까지 반복합니다. Phase 1 MVP — hook 자동화·펌웨어 룰셋·디버깅 통합은 후속 단계.
+작자=Claude, 검토자=Codex 고정 역할로 코드를 합의(`VERDICT: APPROVED`)하거나 최대 N라운드까지 반복합니다. Phase 1 (수동 /fusion) + Phase 2 (자동 리뷰 hook) + Phase 3 (펌웨어 특화 룰셋 ISR/race + Volatile MVP) 구현 완료. Phase 4 (debugging 통합)는 후속.
 
 ## 요구사항
 
