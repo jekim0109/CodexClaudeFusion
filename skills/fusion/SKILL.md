@@ -113,15 +113,35 @@ if (( DIFF_LINE_COUNT > 500 )); then
 fi
 
 PROMPT_FILE="$FUSION_DIR/round-${round}-prompt.txt"
-export TASK_TEXT PREV_HISTORY DIFF_TEXT
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+export TASK_TEXT PREV_HISTORY DIFF_TEXT PROJECT_ROOT SKILL_DIR
 python3 - "$TEMPLATE" "$PROMPT_FILE" <<'PYEOF'
-import sys, os
+import sys, os, json
 tmpl_path, out_path = sys.argv[1], sys.argv[2]
 with open(tmpl_path) as f:
     s = f.read()
 s = s.replace("{{TASK_OR_DIFF_MODE}}", os.environ["TASK_TEXT"])
 s = s.replace("{{PREV_HISTORY_OR_EMPTY}}", os.environ["PREV_HISTORY"])
 s = s.replace("{{GIT_DIFF_HEAD}}", os.environ["DIFF_TEXT"])
+
+# Phase 3: firmware-mode rules append
+project_root = os.environ.get("PROJECT_ROOT", "")
+firmware = False
+if project_root:
+    settings_path = os.path.join(project_root, ".claude", "settings.json")
+    if os.path.isfile(settings_path):
+        try:
+            with open(settings_path) as f:
+                cfg = json.load(f)
+            firmware = cfg.get("fusion", {}).get("firmware") is True
+        except Exception:
+            firmware = False
+if firmware:
+    rules_path = os.path.join(os.environ.get("SKILL_DIR", ""), "prompts", "firmware-rules.md")
+    if os.path.isfile(rules_path):
+        with open(rules_path) as f:
+            s += "\n\n" + f.read()
+
 with open(out_path, "w") as f:
     f.write(s)
 PYEOF
