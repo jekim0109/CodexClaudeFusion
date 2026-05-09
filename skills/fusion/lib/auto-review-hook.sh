@@ -75,15 +75,34 @@ TASK_TEXT="[auto-review] Stop hook 자동 리뷰. Working tree changes shown bel
 PROMPT_FILE="$FUSION_DIR/round-1-prompt.txt"
 LAST_MSG_FILE="$FUSION_DIR/round-1-codex.txt"
 
-export TASK_TEXT PREV_HISTORY DIFF_TEXT
+export TASK_TEXT PREV_HISTORY DIFF_TEXT PROJECT_ROOT SKILL_DIR
 python3 - "$SKILL_DIR/prompts/reviewer.md" "$PROMPT_FILE" <<'PYEOF'
-import sys, os
+import sys, os, json
 tmpl_path, out_path = sys.argv[1], sys.argv[2]
 with open(tmpl_path) as f:
     s = f.read()
 s = s.replace("{{TASK_OR_DIFF_MODE}}", os.environ["TASK_TEXT"])
 s = s.replace("{{PREV_HISTORY_OR_EMPTY}}", os.environ["PREV_HISTORY"])
 s = s.replace("{{GIT_DIFF_HEAD}}", os.environ["DIFF_TEXT"])
+
+# Phase 3: firmware-mode rules append
+project_root = os.environ.get("PROJECT_ROOT", "")
+firmware = False
+if project_root:
+    settings_path = os.path.join(project_root, ".claude", "settings.json")
+    if os.path.isfile(settings_path):
+        try:
+            with open(settings_path) as f:
+                cfg = json.load(f)
+            firmware = cfg.get("fusion", {}).get("firmware") is True
+        except Exception:
+            firmware = False
+if firmware:
+    rules_path = os.path.join(os.environ.get("SKILL_DIR", ""), "prompts", "firmware-rules.md")
+    if os.path.isfile(rules_path):
+        with open(rules_path) as f:
+            s += "\n\n" + f.read()
+
 with open(out_path, "w") as f:
     f.write(s)
 PYEOF
@@ -117,9 +136,12 @@ case "$VERDICT" in
         # Tolerate optional list marker (- or *) and surrounding whitespace.
         # grep -c always prints count (even 0); use ${VAR:-0} for missing-file edge.
         # Do NOT chain `|| echo 0` (would append a second "0" line on no-match exit).
-        BLOCKERS=$(grep -cE '^[[:space:]]*[-*]?[[:space:]]*BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null); BLOCKERS=${BLOCKERS:-0}
-        MAJORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null); MAJORS=${MAJORS:-0}
-        MINORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MINOR:'   "$LAST_MSG_FILE" 2>/dev/null); MINORS=${MINORS:-0}
+        # Match both bare form (BLOCKER:) and category-prefixed form (BLOCKER (A.ISR):)
+        # required by Phase 3 firmware-rules.md. Uses character class after BLOCKER to
+        # accept colon, paren, or whitespace boundary.
+        BLOCKERS=$(grep -cE '^[[:space:]]*[-*]?[[:space:]]*BLOCKER([[:space:]]|\(|:)' "$LAST_MSG_FILE" 2>/dev/null); BLOCKERS=${BLOCKERS:-0}
+        MAJORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MAJOR([[:space:]]|\(|:)'   "$LAST_MSG_FILE" 2>/dev/null); MAJORS=${MAJORS:-0}
+        MINORS=$(grep -cE   '^[[:space:]]*[-*]?[[:space:]]*MINOR([[:space:]]|\(|:)'   "$LAST_MSG_FILE" 2>/dev/null); MINORS=${MINORS:-0}
         echo "[fusion] ⚠ auto-review REVISE — ${BLOCKERS} BLOCKER, ${MAJORS} MAJOR, ${MINORS} MINOR (state: $FUSION_DIR)"
         ;;
     *)
