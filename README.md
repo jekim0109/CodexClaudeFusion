@@ -91,6 +91,52 @@ S2·S3·S5 결과는 codex CLI 0.128.0 (gpt-5.5) 환경에서 2026-05-08 검증.
 - 스펙: `docs/superpowers/specs/2026-05-08-codex-claude-fusion-design.md`
 - 구현 계획: `docs/superpowers/plans/2026-05-08-codex-claude-fusion-phase1.md`
 
+## 자동 리뷰 (Phase 2)
+
+`Stop` hook으로 Claude의 응답이 끝날 때마다 Codex 리뷰 1라운드를 자동 실행합니다. 코드 자동 수정은 하지 않습니다 — REVISE 알림을 보고 사용자가 `/fusion`을 수동 호출해 핑퐁 진행 결정.
+
+### Project-local opt-in
+
+```bash
+cd <your-project>
+/path/to/CodexClaudeFusion/enable-auto.sh
+```
+
+이후 그 프로젝트에서 Claude의 응답이 끝나면 자동으로:
+```
+[fusion] ✓ auto-review APPROVED (6s)
+```
+또는
+```
+[fusion] ⚠ auto-review REVISE — 1 BLOCKER, 2 MAJOR, 0 MINOR (state: /tmp/fusion-...)
+```
+
+해제:
+```bash
+cd <your-project>
+/path/to/CodexClaudeFusion/disable-auto.sh
+```
+
+### 노이즈 컨트롤
+
+다음 조건 중 하나라도 해당하면 자동 리뷰는 silent skip:
+- working tree 변경 없음
+- diff 3줄 미만
+- 변경 파일이 모두 blocklist (`*.md`, `*.lock`, `*.log`, `*.bak`, `package-lock.json` 등)
+- 직전에 동일 diff를 이미 리뷰함 (`.fusion-cache.txt` 해시 캐시)
+
+500줄 초과 변경은 한 줄 안내 후 skip — 수동 `/fusion` 권장.
+
+### 검증 시나리오 (dogfooding)
+
+| 시나리오 | 기대 결과 | 결과 |
+|---|---|---|
+| A1: opt-in → 작은 *.c 5줄 변경 → 응답 끝 | "[fusion] ✓ APPROVED" 1라인 | (추후 기록) |
+| A2: opt-in → buggy *.c (off-by-one) → 응답 끝 | "[fusion] ⚠ REVISE — 1 MAJOR..." | (추후 기록) |
+| A3: opt-in → README만 수정 | 패턴 필터로 silent | (추후 기록) |
+| A4: 동일 diff로 두 번 응답 | 첫 회만 review, 둘째는 캐시 silent | (추후 기록) |
+| A5: disable-auto.sh 후 변경 | hook 미등록, 출력 없음 | (추후 기록) |
+
 ## 후속 단계 로드맵
 
 - **Phase 2**: PostToolUse hook 자동 트리거
