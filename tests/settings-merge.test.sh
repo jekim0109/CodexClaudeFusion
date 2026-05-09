@@ -92,5 +92,41 @@ else
 fi
 cd "$proj"
 
+# --- Phase 3: enable-firmware.sh cases ---
+
+ENABLE_FW="$REPO/enable-firmware.sh"
+DISABLE_FW="$REPO/disable-firmware.sh"
+
+# Setup fresh tmp project for firmware tests
+proj_fw=$(mktemp -d)
+cd "$proj_fw"
+git init -q
+git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+
+# (10) enable-firmware on empty project: settings.json gets fusion.firmware=true
+bash "$ENABLE_FW" >/dev/null
+assert_json_contains "enable-firmware: fusion.firmware=true added" \
+    ".claude/settings.json" \
+    "d.get('fusion',{}).get('firmware') is True"
+
+# (11) re-enable: idempotent
+bash "$ENABLE_FW" >/dev/null
+assert_json_contains "enable-firmware: idempotent (still true, no extra)" \
+    ".claude/settings.json" \
+    "d.get('fusion',{}).get('firmware') is True"
+
+# (12) preserve existing hooks key alongside fusion key
+cat > .claude/settings.json <<'JSON'
+{
+  "hooks": {
+    "Stop": [{"hooks": [{"type": "command", "command": "bash /tmp/user-hook.sh"}]}]
+  }
+}
+JSON
+bash "$ENABLE_FW" >/dev/null
+assert_json_contains "enable-firmware: existing hooks preserved alongside fusion key" \
+    ".claude/settings.json" \
+    "any('user-hook.sh' in h.get('command','') for s in d.get('hooks',{}).get('Stop',[]) for h in s.get('hooks',[])) and d.get('fusion',{}).get('firmware') is True"
+
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
