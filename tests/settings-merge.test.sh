@@ -128,5 +128,30 @@ assert_json_contains "enable-firmware: existing hooks preserved alongside fusion
     ".claude/settings.json" \
     "any('user-hook.sh' in h.get('command','') for s in d.get('hooks',{}).get('Stop',[]) for h in s.get('hooks',[])) and d.get('fusion',{}).get('firmware') is True"
 
+# (13) disable-firmware: removes our key, preserves user's hooks
+bash "$DISABLE_FW" >/dev/null
+assert_json_contains "disable-firmware: fusion.firmware removed, hooks preserved" \
+    ".claude/settings.json" \
+    "(d.get('fusion',{}).get('firmware') is None) and any('user-hook.sh' in h.get('command','') for s in d.get('hooks',{}).get('Stop',[]) for h in s.get('hooks',[]))"
+
+# (14) disable-firmware on already-disabled: noop
+bash "$DISABLE_FW" >/dev/null
+assert_json_contains "disable-firmware: already absent — noop" \
+    ".claude/settings.json" \
+    "d.get('fusion',{}).get('firmware') is None"
+
+# (15) disable-firmware with no settings.json: graceful
+proj_fw3=$(mktemp -d)
+cd "$proj_fw3"
+git init -q
+git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+out=$(bash "$DISABLE_FW" 2>&1) && rc=0 || rc=$?
+if [[ "$rc" == "0" ]]; then
+    PASS=$((PASS+1)); printf '  PASS: disable-firmware on missing settings.json exits 0\n'
+else
+    FAIL=$((FAIL+1)); printf '  FAIL: disable-firmware missing settings.json rc=%s out=%q\n' "$rc" "$out"
+fi
+cd "$proj_fw"
+
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
