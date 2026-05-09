@@ -67,5 +67,30 @@ fi
     { PASS=$((PASS+1)); printf '  PASS: .bak created\n'; } || \
     { FAIL=$((FAIL+1)); printf '  FAIL: .bak missing\n'; }
 
+# (7) disable removes our entry, preserves user's
+bash "$DISABLE" >/dev/null
+assert_json_contains "disable removes our entry, preserves user's" \
+    ".claude/settings.json" \
+    "(not any('auto-review-hook.sh' in h.get('command','') for s in d.get('hooks',{}).get('Stop',[]) for h in s.get('hooks',[]))) and any('user-hook.sh' in h.get('command','') for s in d.get('hooks',{}).get('Stop',[]) for h in s.get('hooks',[]))"
+
+# (8) disable on already-disabled: noop
+bash "$DISABLE" >/dev/null
+assert_json_contains "disable when entry already absent: noop" \
+    ".claude/settings.json" \
+    "not any('auto-review-hook.sh' in h.get('command','') for s in d.get('hooks',{}).get('Stop',[]) for h in s.get('hooks',[]))"
+
+# (9) disable with no settings.json at all: graceful
+proj2=$(mktemp -d)
+cd "$proj2"
+git init -q
+git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+out=$(bash "$DISABLE" 2>&1) && rc=0 || rc=$?
+if [[ "$rc" == "0" ]]; then
+    PASS=$((PASS+1)); printf '  PASS: disable on missing settings.json exits 0\n'
+else
+    FAIL=$((FAIL+1)); printf '  FAIL: disable missing settings.json rc=%s out=%q\n' "$rc" "$out"
+fi
+cd "$proj"
+
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
