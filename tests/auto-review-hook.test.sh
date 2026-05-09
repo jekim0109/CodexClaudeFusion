@@ -196,5 +196,35 @@ assert_called2 "Makefile + lock → reaches stage past pattern filter" 0 no "" "
 conly=$(prep_repo_with_files src/foo.c)
 assert_called2 "only *.c → reaches stage past pattern filter" 0 no "" "$conly" "$t_stub"
 
+# --- cache cases ---
+
+# (12) same diff hooked twice → second call: codex NOT called
+cache_repo=$(prep_repo_with_files src/foo.c)
+# first call: codex CALLED (cached after this)
+sentinel1=$(mktemp -u); rm -f "$sentinel1"
+out1="$(env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" CODEX_CALLED_SENTINEL="$sentinel1" \
+    bash -c "cd '$cache_repo' && bash '$HOOK'" 2>/dev/null)"
+exit1=$?
+called1=no; [[ -e "$sentinel1" ]] && called1=yes; rm -f "$sentinel1"
+# second call: same diff, codex NOT called
+sentinel2=$(mktemp -u); rm -f "$sentinel2"
+out2="$(env -i HOME="$HOME" PATH="$t_stub:$GIT_BIN_DIR:/usr/bin:/bin" CODEX_CALLED_SENTINEL="$sentinel2" \
+    bash -c "cd '$cache_repo' && bash '$HOOK'" 2>/dev/null)"
+exit2=$?
+called2=no; [[ -e "$sentinel2" ]] && called2=yes; rm -f "$sentinel2"
+if [[ "$exit1" == "0" && "$called1" == "yes" && "$exit2" == "0" && "$called2" == "no" ]]; then
+    PASS=$((PASS+1)); printf '  PASS: same diff twice → first calls codex, second silent\n'
+else
+    FAIL=$((FAIL+1)); printf '  FAIL: cache hit case (exit1=%s called1=%s exit2=%s called2=%s)\n' \
+        "$exit1" "$called1" "$exit2" "$called2"
+fi
+[[ -f "$cache_repo/.fusion-cache.txt" ]] && \
+    cache_lines=$(wc -l < "$cache_repo/.fusion-cache.txt") || cache_lines=0
+if [[ "$cache_lines" -ge 1 ]]; then
+    PASS=$((PASS+1)); printf '  PASS: .fusion-cache.txt has at least 1 hash entry\n'
+else
+    FAIL=$((FAIL+1)); printf '  FAIL: .fusion-cache.txt missing or empty\n'
+fi
+
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]

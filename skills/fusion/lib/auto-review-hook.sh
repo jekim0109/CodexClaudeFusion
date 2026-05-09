@@ -56,5 +56,13 @@ while IFS= read -r f; do
 done <<< "$CHANGED_FILES"
 (( all_blocked )) && exit 0
 
-# Subsequent filter and codex steps will be added in later tasks.
+# 4. Filter (d) — diff hash cache (read; write happens after a successful codex round)
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+CACHE_FILE="$PROJECT_ROOT/.fusion-cache.txt"
+DIFF_HASH=$(printf '%s' "$DIFF_TEXT" | shasum -a 256 | awk '{print $1}')
+if [[ -f "$CACHE_FILE" ]] && grep -qx "$DIFF_HASH" "$CACHE_FILE"; then
+    exit 0
+fi
+
+# Subsequent codex call and cache write steps will be added in task 5.
 exit 0
