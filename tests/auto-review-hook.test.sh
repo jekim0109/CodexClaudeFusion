@@ -24,6 +24,7 @@ GIT_BIN_DIR="$(dirname "$(command -v git)")"
 # stub_codex_dir: creates a tmp dir containing a fake `codex` and `git` (or only codex)
 # usage: PATH="$(stub_codex_dir approved)":/usr/bin:/bin ...
 stub_codex_dir() {
+    # mode: "approved" | "revise" | "fail" | "missing"
     local mode="$1"
     local d
     d=$(mktemp -d)

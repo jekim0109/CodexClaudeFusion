@@ -30,7 +30,7 @@ fi
 
 # 3. Filter (c) — file pattern blocklist
 BLOCK_PATTERNS=(
-    "*.md" "*.txt" "*.json" "*.lock" "*.log" "*.bak"
+    "*.md" "*.txt" "*.lock" "*.log" "*.bak"
     "package-lock.json" "yarn.lock" "Cargo.lock" "pnpm-lock.yaml"
 )
 
