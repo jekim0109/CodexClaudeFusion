@@ -1,37 +1,47 @@
 #!/usr/bin/env bash
-# Install /fusion skill by symlinking ~/.claude/skills/fusion to this repo's skills/fusion.
-# Idempotent: noop if link is already correct; refuses to overwrite a non-symlink.
+# Install /fusion and /fusion-debug skills by symlinking
+# ~/.claude/skills/fusion (review pingpong) and ~/.claude/skills/fusion-debug
+# (systematic-debugging pingpong) to this repo.
+# Idempotent: noop if links are already correct; refuses to overwrite a non-symlink.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC="$REPO_DIR/skills/fusion"
 DEST_PARENT="$HOME/.claude/skills"
-DEST="$DEST_PARENT/fusion"
-
-if [[ ! -d "$SRC" ]]; then
-    echo "ERROR: source not found: $SRC" >&2
-    exit 1
-fi
-
 mkdir -p "$DEST_PARENT"
 
-if [[ -L "$DEST" ]]; then
-    current="$(readlink "$DEST")"
-    if [[ "$current" == "$SRC" ]]; then
-        echo "OK: $DEST already points to $SRC (no change)"
-        exit 0
-    fi
-    echo "REPLACING symlink: $DEST"
-    echo "  was -> $current"
-    echo "  now -> $SRC"
-    rm "$DEST"
-elif [[ -e "$DEST" ]]; then
-    echo "ERROR: $DEST exists but is not a symlink. Refusing to overwrite." >&2
-    echo "       Move or remove it manually, then re-run." >&2
-    exit 1
-fi
+# Idempotent symlink installer for one skill name.
+install_skill() {
+    local name="$1"
+    local src="$REPO_DIR/skills/$name"
+    local dest="$DEST_PARENT/$name"
 
-ln -s "$SRC" "$DEST"
-echo "INSTALLED: $DEST -> $SRC"
-echo "이제 Claude Code에서 /fusion 사용 가능합니다."
+    if [[ ! -d "$src" ]]; then
+        echo "ERROR: source not found: $src" >&2
+        exit 1
+    fi
+
+    if [[ -L "$dest" ]]; then
+        local current
+        current="$(readlink "$dest")"
+        if [[ "$current" == "$src" ]]; then
+            echo "OK: $dest already points to $src (no change)"
+            return 0
+        fi
+        echo "REPLACING symlink: $dest"
+        echo "  was -> $current"
+        echo "  now -> $src"
+        rm "$dest"
+    elif [[ -e "$dest" ]]; then
+        echo "ERROR: $dest exists but is not a symlink. Refusing to overwrite." >&2
+        echo "       Move or remove it manually, then re-run." >&2
+        exit 1
+    fi
+
+    ln -s "$src" "$dest"
+    echo "INSTALLED: $dest -> $src"
+}
+
+install_skill "fusion"
+install_skill "fusion-debug"
+echo "이제 Claude Code에서 /fusion (review) 와 /fusion-debug (systematic-debugging) 모두 사용 가능합니다."
