@@ -110,9 +110,9 @@ case "$VERDICT" in
         echo "[fusion] ✓ auto-review APPROVED (${ELAPSED}s)"
         ;;
     REVISE)
-        BLOCKERS=$(grep -c '^- BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null || echo 0)
-        MAJORS=$(grep -c   '^- MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
-        MINORS=$(grep -c   '^- MINOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        BLOCKERS=$(grep -cE '^[[:space:]]*- BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        MAJORS=$(grep -cE   '^[[:space:]]*- MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        MINORS=$(grep -cE   '^[[:space:]]*- MINOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
         echo "[fusion] ⚠ auto-review REVISE — ${BLOCKERS} BLOCKER, ${MAJORS} MAJOR, ${MINORS} MINOR (state: $FUSION_DIR)"
         ;;
     *)

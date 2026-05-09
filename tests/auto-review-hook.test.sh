@@ -41,7 +41,7 @@ while [[ \$# -gt 0 ]]; do
 done
 case "$mode" in
     approved) printf 'Overview: ok.\n\nNo actionable issues.\n\nVERDICT: APPROVED' > "\$out" ;;
-    revise)   printf 'Overview\n\n- BLOCKER: x.c:1 — bad — — fix\n\nVERDICT: REVISE'   > "\$out" ;;
+    revise)   printf 'Overview\n\n   - BLOCKER: x.c:1 — bad — — fix\n\nVERDICT: REVISE'   > "\$out" ;;
     fail)     exit 7 ;;
 esac
 exit 0
