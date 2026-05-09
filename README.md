@@ -131,15 +131,17 @@ cd <your-project>
 
 | 시나리오 | 기대 결과 | 결과 |
 |---|---|---|
-| A1: opt-in → 작은 *.c 5줄 변경 → 응답 끝 | `[fusion] ✓ auto-review APPROVED (Ns)` 1라인 | (추후 기록) |
-| A2: opt-in → buggy *.c (off-by-one) → 응답 끝 | `[fusion] ⚠ auto-review REVISE — N BLOCKER, M MAJOR, K MINOR (state: /tmp/fusion-...)` | (추후 기록) |
-| A3: opt-in → README만 수정 | 패턴 필터로 silent | (추후 기록) |
-| A4: 동일 diff로 두 번 응답 | 첫 회만 review, 둘째는 캐시 silent | (추후 기록) |
-| A5: disable-auto.sh 후 변경 | hook 미등록, 출력 없음 | (추후 기록) |
+| A1: opt-in → 작은 *.c 5줄 변경 → 응답 끝 | `[fusion] ✓ auto-review APPROVED (Ns)` 1라인 | ✅ 26s, MINOR-only도 APPROVED |
+| A2: opt-in → buggy *.c (off-by-one) → 응답 끝 | `[fusion] ⚠ auto-review REVISE — N BLOCKER, M MAJOR, K MINOR (state: /tmp/fusion-...)` | ✅ `0 BLOCKER, 1 MAJOR, 0 MINOR`, off-by-one 정확 잡음 |
+| A3: opt-in → README만 수정 | 패턴 필터로 silent | ✅ blocklist 작동 |
+| A4: 동일 diff로 두 번 응답 | 첫 회만 review, 둘째는 캐시 silent | ✅ `.fusion-cache.txt` hit, silent |
+| A5: disable-auto.sh 후 변경 | hook 미등록, 출력 없음 | ✅ settings.json에서 entry 정확 제거 |
+
+A1~A5 dogfooding 결과는 codex CLI 0.128.0 환경에서 2026-05-09 검증. 두 가지 버그 발견·수정: (1) severity count `|| echo 0`이 매치 0건일 때 double-print(`"0\n0"`); (2) Codex가 reviewer.md의 `- BLOCKER:` 형식 대신 `BLOCKER:` 만 출력하는 경우 매칭 안됨. 둘 다 fix 적용 (regex 관대화 + ${VAR:-0} 패턴).
 
 ## 후속 단계 로드맵
 
-- **Phase 2**: Stop hook 자동 리뷰 (구현 진행 중 — 위 "자동 리뷰" 섹션 참조)
+- **Phase 2**: Stop hook 자동 리뷰 ✅ 구현 완료, A1~A5 dogfooding 통과 (위 "자동 리뷰" 섹션 참조)
 - **Phase 3**: 펌웨어 특화 룰셋 (ARM/embedded, ISR, watchdog)
 - **Phase 4**: systematic-debugging / TDD 통합
 
