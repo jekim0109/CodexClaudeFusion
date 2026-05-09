@@ -113,9 +113,12 @@ case "$VERDICT" in
         ;;
     REVISE)
         write_cache
-        BLOCKERS=$(grep -cE '^[[:space:]]*- BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null || echo 0)
-        MAJORS=$(grep -cE   '^[[:space:]]*- MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
-        MINORS=$(grep -cE   '^[[:space:]]*- MINOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
+        # grep -c always prints the count to stdout (even 0); exit 1 on no-match.
+        # Use ${VAR:-0} fallback for the missing-file edge case; do NOT chain `|| echo 0`
+        # (that would append a second "0" line on the no-match exit, garbling the output).
+        BLOCKERS=$(grep -cE '^[[:space:]]*- BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null); BLOCKERS=${BLOCKERS:-0}
+        MAJORS=$(grep -cE   '^[[:space:]]*- MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null); MAJORS=${MAJORS:-0}
+        MINORS=$(grep -cE   '^[[:space:]]*- MINOR:'   "$LAST_MSG_FILE" 2>/dev/null); MINORS=${MINORS:-0}
         echo "[fusion] ⚠ auto-review REVISE — ${BLOCKERS} BLOCKER, ${MAJORS} MAJOR, ${MINORS} MINOR (state: $FUSION_DIR)"
         ;;
     *)
