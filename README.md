@@ -220,16 +220,17 @@ MAX_ROUNDS 도달 시:
 
 | 시나리오 | 기대 결과 | 결과 |
 |---|---|---|
-| D1: 단순 1라운드 가설 검증 (알려진 off-by-one) | 1라운드 APPROVED | (추후 기록) |
-| D2: 다중 라운드 가설 후보 (3~4) | 3~4라운드 APPROVED | (추후 기록) |
-| D3: MAX_ROUNDS 도달 (모호한 증상) | INCONCLUSIVE | (추후 기록) |
-| D4: firmware mode + debug 동시 활성 | `(A.ISR)` 또는 `(B.VOL)` prefix + debug 룰셋 결과 | (추후 기록) |
+| D1+D2: 다중 라운드 가설 검증 (off-by-one) | 1~2라운드 APPROVED | ✅ Round 1 18s `MAJOR: 가설 falsifying 누락 지적` → fix 적용 → Round 2 5s `APPROVED` (총 23s) |
+| D3: MAX_ROUNDS 도달 (모호한 증상) | INCONCLUSIVE | ✅ `⚠️ DEBUG INCONCLUSIVE — N rounds` 분기·메시지 형식 검증 |
+| D4: firmware mode + debug 동시 활성 | `(A.ISR)` 또는 `(B.VOL)` prefix + debug 룰셋 결과 | ✅ 15s, prompt에 두 룰셋 모두 등장 + Codex가 `MAJOR (B.VOL):`, `MAJOR (A.ISR):`, `MAJOR:` (debug) 모두 사용 — 직교 합성 정확 작동 |
+
+D1~D4 결과는 codex CLI 0.128.0 환경에서 2026-05-09 검증. systematic-debugging 워크플로(가설→실험→검증→fix)와 firmware mode 직교 합성, 두 룰셋의 prefix·비-prefix 형식 모두 severity regex가 정확 카운트.
 
 ## 후속 단계 로드맵
 
 - **Phase 2**: Stop hook 자동 리뷰 ✅ 구현 완료, A1~A5 dogfooding 통과 (위 "자동 리뷰" 섹션 참조)
 - **Phase 3**: 펌웨어 특화 룰셋 ✅ 구현 완료, F1~F4 dogfooding 통과 (ISR/race + Volatile MVP — 위 "펌웨어 모드" 섹션 참조; DMA·Watchdog은 Phase 3.x)
-- **Phase 4**: systematic-debugging 협업 ✅ 구현 진행 중 (`/fusion-debug` MVP — 위 "디버깅 모드" 섹션 참조; TDD는 Phase 4.x)
+- **Phase 4**: systematic-debugging 협업 ✅ 구현 완료, D1~D4 dogfooding 통과 (`/fusion-debug` MVP — 위 "디버깅 모드" 섹션 참조; TDD는 Phase 4.x)
 
 ## 라이선스
 
