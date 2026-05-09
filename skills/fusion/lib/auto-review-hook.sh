@@ -100,16 +100,19 @@ ELAPSED=$SECONDS
 # 6. VERDICT parse
 VERDICT=$(bash "$SKILL_DIR/lib/parse-verdict.sh" < "$LAST_MSG_FILE")
 
-# 7. Cache write (only on a successful round)
-echo "$DIFF_HASH" >> "$CACHE_FILE"
-tail -n 100 "$CACHE_FILE" > "$CACHE_FILE.tmp" 2>/dev/null && mv "$CACHE_FILE.tmp" "$CACHE_FILE"
+# 7+8. Cache write + output (only on a verified VERDICT; UNKNOWN does NOT cache to avoid permanent silence on transient codex anomalies)
+write_cache() {
+    echo "$DIFF_HASH" >> "$CACHE_FILE"
+    tail -n 100 "$CACHE_FILE" > "$CACHE_FILE.tmp" 2>/dev/null && mv "$CACHE_FILE.tmp" "$CACHE_FILE"
+}
 
-# 8. Output
 case "$VERDICT" in
     APPROVED)
+        write_cache
         echo "[fusion] ✓ auto-review APPROVED (${ELAPSED}s)"
         ;;
     REVISE)
+        write_cache
         BLOCKERS=$(grep -cE '^[[:space:]]*- BLOCKER:' "$LAST_MSG_FILE" 2>/dev/null || echo 0)
         MAJORS=$(grep -cE   '^[[:space:]]*- MAJOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)
         MINORS=$(grep -cE   '^[[:space:]]*- MINOR:'   "$LAST_MSG_FILE" 2>/dev/null || echo 0)

@@ -19,7 +19,7 @@ else
     printf '{}' > "$SETTINGS"
 fi
 
-python3 - "$SETTINGS" "$HOOK_CMD" <<'PYEOF'
+if ! python3 - "$SETTINGS" "$HOOK_CMD" <<'PYEOF'
 import json, sys
 path, cmd = sys.argv[1], sys.argv[2]
 with open(path) as f:
@@ -42,6 +42,10 @@ with open(path, "w") as f:
     json.dump(data, f, indent=2)
 print("noop" if already else "added")
 PYEOF
+then
+    echo "ERROR: settings.json 손상 — 백업 파일에서 복원하세요: cp \"$SETTINGS.bak\" \"$SETTINGS\"" >&2
+    exit 1
+fi
 
 # .gitignore: append .fusion-cache.txt if not present
 if [[ -f "$GITIGNORE" ]]; then
