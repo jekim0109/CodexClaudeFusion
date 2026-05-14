@@ -36,6 +36,18 @@ cd CodexClaudeFusion
 
 이후 Claude Code 어느 프로젝트에서나 `/fusion`을 사용할 수 있습니다.
 
+## Public install
+
+Public GitHub 저장소로 공개한 뒤에는 `<public-git-url>`을 실제 git URL로 바꿔 안내하면 됩니다:
+
+```bash
+git clone <public-git-url> CodexClaudeFusion
+cd CodexClaudeFusion
+./install.sh
+```
+
+이 설치는 Claude Code용 `/fusion`과 `/fusion-debug` skill symlink를 `~/.claude/skills/` 아래에 만듭니다. Codex companion plugin is included, but it is not auto-registered globally. Codex companion을 쓰려면 사용자의 Codex plugin/marketplace 설정에서 이 repo의 `plugins/claude-fusion-companion`을 별도로 로드해야 합니다.
+
 설치 후 생기는 항목:
 
 - `~/.claude/skills/fusion` → `/fusion` 리뷰 핑퐁 스킬
@@ -267,4 +279,4 @@ D1~D4 결과는 codex CLI 0.128.0 환경에서 2026-05-09 검증. systematic-deb
 
 ## 라이선스
 
-(미정)
+MIT License. 자세한 내용은 `LICENSE`를 참조하세요.
