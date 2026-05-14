@@ -22,6 +22,7 @@ assert_contains() {
 assert_contains "README has public install section" "$README" "## Public install"
 assert_contains "README has public GitHub URL" "$README" "https://github.com/jekim0109/CodexClaudeFusion.git"
 assert_contains "README says Codex companion is manual" "$README" "Codex companion plugin is included, but it is not auto-registered globally."
+assert_contains "README documents Codex companion installer" "$README" "./install-codex-companion.sh"
 assert_contains "README links MIT license" "$README" "MIT License"
 assert_contains "LICENSE is MIT" "$LICENSE" "MIT License"
 assert_contains "LICENSE has copyright holder" "$LICENSE" "Copyright (c) 2026 jekim"
