@@ -44,4 +44,5 @@ install_skill() {
 
 install_skill "fusion"
 install_skill "fusion-debug"
+echo "Claude Fusion plugin package installed."
 echo "이제 Claude Code에서 /fusion (review) 와 /fusion-debug (systematic-debugging) 모두 사용 가능합니다."

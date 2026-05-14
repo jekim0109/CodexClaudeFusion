@@ -1,0 +1,37 @@
+{
+  "name": "claude-fusion-companion",
+  "version": "0.1.0",
+  "description": "Codex companion for inspecting and explaining the Claude Fusion plugin package.",
+  "author": {
+    "name": "jekim",
+    "email": "silkfog@naver.com",
+    "url": "https://github.com"
+  },
+  "homepage": "../../README.md",
+  "repository": "../../",
+  "license": "UNLICENSED",
+  "keywords": [
+    "claude",
+    "codex",
+    "fusion",
+    "review"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Claude Fusion Companion",
+    "shortDescription": "Inspect Claude Fusion installation and usage from Codex.",
+    "longDescription": "A thin Codex companion for the Claude Fusion plugin package. It does not replace the Claude Code /fusion and /fusion-debug skills; it helps Codex explain the package boundary, inspect local installation state, and point users to the correct Claude-side commands.",
+    "developerName": "jekim",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Diagnostics"
+    ],
+    "defaultPrompt": [
+      "Check my Claude Fusion setup.",
+      "Explain how Fusion is installed.",
+      "Diagnose Fusion auto-review status."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

@@ -1,8 +1,23 @@
-# Codex–Claude Fusion
+# Claude Fusion Plugin Package
 
-Claude와 Codex가 한 번의 트리거로 자동 핑퐁 검증을 수행하는 슬래시 스킬 `/fusion`.
+Claude와 Codex가 한 번의 트리거로 자동 핑퐁 검증을 수행하는 Claude Code plugin package.
 
 작자=Claude, 검토자=Codex 고정 역할로 코드를 합의(`VERDICT: APPROVED`)하거나 최대 N라운드까지 반복합니다. Phase 1 (수동 /fusion) + Phase 2 (자동 리뷰 hook) + Phase 3 (펌웨어 특화 룰셋 ISR/race + Volatile MVP) 구현 완료. Phase 4 (debugging 통합)는 후속.
+
+## 패키지 경계
+
+이 저장소는 Claude Code에 `/fusion`과 `/fusion-debug` 슬래시 스킬을 설치하는 패키지입니다. Codex is invoked only as the read-only reviewer through `codex exec`; Codex가 직접 코드를 수정하거나 Claude-side loop를 대신 실행하지 않습니다.
+
+Codex companion plugin is packaged separately under `plugins/claude-fusion-companion`. 이 companion은 Claude 패키지를 대체하지 않고, Codex 쪽에서 Fusion 상태 확인·설치 경계 설명·진단을 돕는 얇은 보조 플러그인입니다.
+
+## Two-package layout
+
+| Package | Path | Runtime | Role |
+|---|---|---|---|
+| Claude Fusion plugin package | `skills/fusion`, `skills/fusion-debug` | Claude Code | `/fusion`, `/fusion-debug`, auto-review hook, firmware/debug rule composition |
+| Codex Fusion companion plugin | `plugins/claude-fusion-companion` | Codex plugin system | Fusion install/status diagnostics and boundary explanation |
+
+두 패키지는 같은 git repo에서 함께 버전 관리합니다. Claude 패키지가 실제 핑퐁 루프의 runtime이고, Codex companion은 read-only 진단과 안내만 담당합니다.
 
 ## 요구사항
 
@@ -20,6 +35,24 @@ cd CodexClaudeFusion
 ```
 
 이후 Claude Code 어느 프로젝트에서나 `/fusion`을 사용할 수 있습니다.
+
+설치 후 생기는 항목:
+
+- `~/.claude/skills/fusion` → `/fusion` 리뷰 핑퐁 스킬
+- `~/.claude/skills/fusion-debug` → `/fusion-debug` systematic-debugging 스킬
+
+프로젝트별 자동 리뷰와 펌웨어 룰은 별도 opt-in입니다. 각각 `enable-auto.sh`, `enable-firmware.sh`로 대상 프로젝트의 `.claude/settings.json`에만 기록됩니다.
+
+## Codex companion plugin
+
+Codex용 companion plugin은 repo-local 플러그인으로 포함되어 있습니다:
+
+- manifest: `plugins/claude-fusion-companion/.codex-plugin/plugin.json`
+- skill: `plugins/claude-fusion-companion/skills/fusion-status/SKILL.md`
+- diagnostics: `plugins/claude-fusion-companion/scripts/diagnose-fusion.sh`
+- marketplace entry: `.agents/plugins/marketplace.json`
+
+이 companion의 역할은 Codex에서 Fusion 설치 상태를 설명하고 진단하는 것입니다. `/fusion`과 `/fusion-debug` 실행은 여전히 Claude Code skill에서 수행합니다.
 
 ## 사용법
 

@@ -1,0 +1,20 @@
+{
+  "name": "claude-fusion-local",
+  "interface": {
+    "displayName": "Claude Fusion Local"
+  },
+  "plugins": [
+    {
+      "name": "claude-fusion-companion",
+      "source": {
+        "source": "local",
+        "path": "./plugins/claude-fusion-companion"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

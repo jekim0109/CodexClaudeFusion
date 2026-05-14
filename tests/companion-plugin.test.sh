@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Static and smoke checks for the Codex companion plugin.
+
+set -u
+ROOT="$(cd "$(dirname "$0")"/.. && pwd)"
+PLUGIN="$ROOT/plugins/claude-fusion-companion"
+MANIFEST="$PLUGIN/.codex-plugin/plugin.json"
+MARKETPLACE="$ROOT/.agents/plugins/marketplace.json"
+SKILL="$PLUGIN/skills/fusion-status/SKILL.md"
+SCRIPT="$PLUGIN/scripts/diagnose-fusion.sh"
+FAIL=0
+PASS=0
+
+pass() {
+    PASS=$((PASS+1))
+    printf '  PASS: %s\n' "$1"
+}
+
+fail() {
+    FAIL=$((FAIL+1))
+    printf '  FAIL: %s\n' "$1"
+}
+
+assert_file() {
+    [[ -f "$2" ]] && pass "$1" || fail "$1"
+}
+
+assert_contains() {
+    local desc="$1" file="$2" needle="$3"
+    if grep -qF "$needle" "$file"; then
+        pass "$desc"
+    else
+        fail "$desc"
+        printf '    missing: %s\n' "$needle"
+    fi
+}
+
+assert_file "plugin manifest exists" "$MANIFEST"
+assert_file "marketplace exists" "$MARKETPLACE"
+assert_file "fusion-status skill exists" "$SKILL"
+assert_file "diagnostic script exists" "$SCRIPT"
+
+python3 -m json.tool "$MANIFEST" >/dev/null 2>&1 && pass "manifest JSON parses" || fail "manifest JSON parses"
+python3 -m json.tool "$MARKETPLACE" >/dev/null 2>&1 && pass "marketplace JSON parses" || fail "marketplace JSON parses"
+
+assert_contains "manifest names plugin" "$MANIFEST" '"name": "claude-fusion-companion"'
+assert_contains "manifest points to skills" "$MANIFEST" '"skills": "./skills/"'
+assert_contains "marketplace points to plugin path" "$MARKETPLACE" '"path": "./plugins/claude-fusion-companion"'
+assert_contains "skill states boundary" "$SKILL" "Claude Fusion is primarily a Claude Code plugin package."
+assert_contains "skill forbids replacing runtime" "$SKILL" "does not run the Claude-side pingpong loop"
+
+diagnostic_out="$(bash "$SCRIPT" 2>/dev/null)"
+printf '%s' "$diagnostic_out" | grep -q "Claude Fusion companion diagnostics" && pass "diagnostic script runs" || fail "diagnostic script runs"
+printf '%s' "$diagnostic_out" | grep -q "/fusion and /fusion-debug run inside Claude Code" && pass "diagnostic explains runtime boundary" || fail "diagnostic explains runtime boundary"
+
+printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
+[[ "$FAIL" -eq 0 ]]

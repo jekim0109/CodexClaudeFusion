@@ -7,6 +7,18 @@ description: Claude↔Codex systematic-debugging 협업. /fusion-debug <symptom>
 
 너(Claude)는 가설을 제안하고 실험·fix를 실행하는 작자(author) 역할을 맡는다. Codex는 read-only 검토자로 매 라운드 가설·실험·fix의 결함과 누락 가설을 지적한다.
 
+## 글로벌 House Rules 반영
+
+이 스킬은 사용자의 전역 코딩 지침을 따른다. 특히:
+
+- 디버깅 시작 전에 관찰된 증상, 가정, 성공 기준, 불확실한 해석을 명시한다.
+- 가설은 원인-결과가 구체적이어야 하고, 실험은 가능한 한 한 변수를 반증하도록 설계한다.
+- 충분히 검증되지 않은 상태에서 fix를 적용하지 않는다.
+- 최소 변경을 우선한다. 증상과 무관한 리팩터링, 새 기능, 방어적 침묵 처리는 하지 않는다.
+- 완료 주장 전 관련 테스트/빌드/로그/grep 등 검증 출력을 확인한다.
+- 위험·비가역 동작(삭제, force push, 히스토리 재작성, 안전장치 우회, 파괴적 DB 작업, 외부 발신/deploy, `sudo`, 프로젝트 범위 밖 쓰기)은 사용자 명시 승인 없이 실행하지 않는다.
+- Codex 반증은 검토 후 수용/기각한다. 잘못된 지적은 적용하지 말고 이유를 기록한다.
+
 ## 0. 사전 점검
 
 ```bash
@@ -55,13 +67,15 @@ TASK_TEXT="[debug] symptom: $SYMPTOM — propose hypotheses, design falsifying e
    - 새 가설 제안 (지금까지 미커버 영역)
    - 기존 가설 검증 실험 설계·실행 (Edit/Bash 도구 사용)
    - 충분히 검증된 가설에 대한 fix 적용
-3. **`round-N-claude.txt`에 한 줄 요약 저장**:
+3. **검증**: 실행한 실험·테스트·로그 확인의 핵심 출력과 exit code를 확인
+4. **`round-N-claude.txt`에 한 줄 요약 저장**:
 
 ```bash
 cat > "$FUSION_DIR/round-${round}-claude.txt" <<EOF
 hypothesis: <H_n>
 experiment: <what was tested and how>
 result: <falsified | confirmed | inconclusive>
+verification: <command or evidence checked>
 next action: <next hypothesis or fix>
 EOF
 ```
