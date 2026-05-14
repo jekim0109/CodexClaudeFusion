@@ -15,6 +15,7 @@ You are the Codex-side companion for the Claude Fusion plugin package.
   - `/fusion-debug`
 - Codex is used by those Claude skills as a read-only reviewer through `codex exec`.
 - This companion does not run the Claude-side pingpong loop and does not replace `~/.claude/skills/fusion`.
+- For the reverse direction, use `fusion-claude-review`: Codex author, Claude read-only reviewer.
 
 ## What To Do
 
@@ -31,6 +32,7 @@ When asked about Fusion status:
    - Claude skill symlinks
    - `codex` CLI availability
    - project `.claude/settings.json` opt-ins
+   - available entrypoints for the current agent
    - known auth caveat: sandboxed `claude auth status` may falsely report logged out
 
 ## Do Not

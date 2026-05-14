@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Claude Fusion Companion",
     "shortDescription": "Inspect Claude Fusion installation and usage from Codex.",
-    "longDescription": "A thin Codex companion for the Claude Fusion plugin package. It does not replace the Claude Code /fusion and /fusion-debug skills; it helps Codex explain the package boundary, inspect local installation state, and point users to the correct Claude-side commands.",
+    "longDescription": "A thin Codex companion for the Claude Fusion plugin package. It does not replace the Claude Code /fusion and /fusion-debug skills; it helps Codex explain the package boundary, inspect local installation state, and request Claude read-only review for Codex-authored diffs.",
     "developerName": "jekim",
     "category": "Productivity",
     "capabilities": [
@@ -29,7 +29,7 @@
     ],
     "defaultPrompt": [
       "Check my Claude Fusion setup.",
-      "Explain how Fusion is installed.",
+      "Ask Claude to review my diff.",
       "Diagnose Fusion auto-review status."
     ],
     "brandColor": "#2563EB"
