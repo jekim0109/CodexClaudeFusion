@@ -29,7 +29,7 @@ Codex companion plugin is packaged separately under `plugins/claude-fusion-compa
 ## 설치
 
 ```bash
-git clone <repo-url> CodexClaudeFusion
+git clone https://github.com/jekim0109/CodexClaudeFusion.git CodexClaudeFusion
 cd CodexClaudeFusion
 ./install.sh
 ```
@@ -38,10 +38,10 @@ cd CodexClaudeFusion
 
 ## Public install
 
-Public GitHub 저장소로 공개한 뒤에는 `<public-git-url>`을 실제 git URL로 바꿔 안내하면 됩니다:
+Public GitHub 저장소에서 바로 설치할 수 있습니다:
 
 ```bash
-git clone <public-git-url> CodexClaudeFusion
+git clone https://github.com/jekim0109/CodexClaudeFusion.git CodexClaudeFusion
 cd CodexClaudeFusion
 ./install.sh
 ```
