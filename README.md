@@ -4,6 +4,8 @@ Claude와 Codex가 한 번의 트리거로 자동 핑퐁 검증을 수행하는 
 
 작자=Claude, 검토자=Codex 고정 역할로 코드를 합의(`VERDICT: APPROVED`)하거나 최대 N라운드까지 반복합니다. Phase 1 (수동 /fusion) + Phase 2 (자동 리뷰 hook) + Phase 3 (펌웨어 특화 룰셋 ISR/race + Volatile MVP) 구현 완료. Phase 4 (debugging 통합)는 후속.
 
+팀원 설치 절차는 `INSTALL.md`를 참조하세요.
+
 ## 패키지 경계
 
 이 저장소는 Claude Code에 `/fusion`과 `/fusion-debug` 슬래시 스킬을 설치하는 패키지입니다. Codex is invoked only as the read-only reviewer through `codex exec`; Codex가 직접 코드를 수정하거나 Claude-side loop를 대신 실행하지 않습니다.
